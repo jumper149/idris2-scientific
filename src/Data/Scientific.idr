@@ -1,5 +1,4 @@
 module Data.Scientific
--- TODO: don't export everything publicly?
 
 import Data.Fin
 import Data.List
