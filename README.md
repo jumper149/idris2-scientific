@@ -15,7 +15,7 @@ Data.Scientific> prettyShowScientific $ x + y
 ```
 
 ## Work in progress
-I Would appreciate some help with this:
+I would appreciate some help with this:
 * can't have implementation `Num (Scientific (S (S b)))`, since the methods need access to `b`
 
 There is still some stuff I want to do:
