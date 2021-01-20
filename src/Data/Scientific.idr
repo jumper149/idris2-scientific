@@ -5,6 +5,10 @@ import Data.Fin
 import Data.List
 import Data.Vect
 
+||| Arbitrary precision coefficient for scientific notation in base b.
+||| Representants are unique regarding (==) and there are no trailing zeros.
+||| For a coefficient x this holds:
+|||   1 <= x < b
 public export
 data Coefficient : (b : Nat) -> Type where
   CoeffInt : Fin (S b) ->
@@ -76,6 +80,10 @@ prettyShowSign s = case s of
                         Positive => ""
                         Negative => "-"
 
+||| A scientific notation numeral in base b.
+||| Representants are unique, as this type is built on top of Coefficient.
+||| The numbers x represented are those which can be written as a finite sum of powers of b:
+|||   x = \Sigma_{i=n}^m a_i * b^i          , {n,m : Integer; a_i : Fin b}
 public export
 data Scientific : (b : Nat) -> Type where
   SciZ : Scientific b
@@ -124,8 +132,8 @@ abs SciZ = SciZ
 abs (Sci _ c e) = Sci Positive c e
 
 -- TODO: What happens, when Integer is negative? Low priority, since this is private.
-private
 ||| The digits of an Integer, least significant first.
+private
 integerDigits : {b : _} -> Integer -> List (Fin (S (S b)))
 integerDigits 0 = []
 integerDigits x = d :: integerDigits r where
@@ -134,6 +142,7 @@ integerDigits x = d :: integerDigits r where
   r : Integer
   r = x `div` natToInteger (S (S b))
 
+||| Remove the zeros near the head of a list.
 private
 removeLeadingZeros : List (Fin (S (S b))) -> Maybe (Fin (S b), List (Fin (S (S b))))
 removeLeadingZeros [] = Nothing
@@ -167,6 +176,7 @@ export
 fromNat : {b : _} -> Nat -> Scientific (S (S b))
 fromNat = fromInteger . natToInteger
 
+||| Single bit full adder in base (S (S b)).
 private
 plusBit : (op : Sign) ->
           {b : _} ->
@@ -188,6 +198,7 @@ plusBit Negative carry x (FS y) = case x of
                                        FZ => (fst $ plusBit Negative carry last (weaken y), True)
                                        FS z => plusBit Negative carry (weaken z) (weaken y)
 
+||| N bit full adder in base (S (S b)).
 export
 plusBits : (op : Sign) ->
            {b : _} ->
@@ -201,19 +212,19 @@ plusBits op carry (x :: xs) (y :: ys) =
       (zs, sign) = plusBits op carry' xs ys
   in (z :: zs, sign)
 
-export
 -- TODO: Add NonEmpty to result type.
 ||| All bits of a Coefficient, least significant first.
+export
 coefficientBits : Coefficient (S (S b)) -> List (Fin (S (S b)))
 coefficientBits (CoeffInt x) = [FS x]
 coefficientBits (CoeffFloat x xs x') = reverse $ FS x :: xs ++ [FS x']
 
-private
 -- TODO: get a definiton like this working:
 --equalizeLength : a ->
 --                 (xs : List a) ->
 --                 (ys : List a) ->
 --                 (Vect (max (length xs) (length ys)) a, Vect (max (length xs) (length ys)) a)
+private
 equalizeLength : a ->
                 (n : _) ->
                 (xs : List a) ->
@@ -229,6 +240,7 @@ equalizeLength a (S k) (x::xs) [] = let (ps, qs) = equalizeLength a k xs []
 equalizeLength a (S k) (x::xs) (y::ys) = let (ps, qs) = equalizeLength a k xs ys
                                          in (x :: ps, y :: qs)
 
+||| Wrapper for plusBits, adding padding regarding the exponent and trailing zeros.
 private
 plusBits' : (op : Sign) ->
             {b : _} ->
@@ -245,6 +257,7 @@ plusBits' op (xs,xe) (ys,ye) =
     ys' : List (Fin (S (S b)))
     ys' = reverse $ ys ++ replicate (integerToNat xe `minus` integerToNat ye) FZ
 
+-- TODO: remove this or removeLeadingZeros
 private
 removeLeadingZeros' : List (Fin (S (S b))) -> (Nat, Maybe (Fin (S b), List (Fin (S (S b)))))
 removeLeadingZeros' [] = (Z, Nothing)
@@ -252,9 +265,9 @@ removeLeadingZeros' (FZ :: xs) = let (n, res) = removeLeadingZeros' xs
                                  in (S n, res)
 removeLeadingZeros' (FS x :: xs) = (Z, Just (x, xs))
 
-private
 ||| Requires the digits to be ordered, least significant first.
 ||| Returns Coefficient and number of significant zeros.
+private
 fromDigits' : List (Fin (S (S b))) -> (Maybe (Coefficient (S (S b))), Nat)
 fromDigits' ys =
   let (n, removedLeading) = removeLeadingZeros' $ reverse ys
@@ -292,8 +305,9 @@ where
   ys : List (Fin (S (S b)))
   ys = coefficientBits c'
 
-private
+-- TODO
 ||| Multiply two Coefficients and return True in the Bool, when the product is greater than the base.
+private
 multCoefficents : {b : _} -> Coefficient (S (S b)) -> Coefficient (S (S b)) -> (Coefficient (S (S b)), Bool)
 multCoefficents (CoeffInt x) (CoeffInt y) =
   case integerToFin res (S b) of
@@ -343,6 +357,7 @@ x * SciZ = SciZ
 -- Abs (Scientific (S (S b))) where
 --   -- abs = abs
 
+||| Create string representing using scientific notation.
 export
 prettyShowScientific : Scientific 10 -> String
 prettyShowScientific SciZ = "0"
