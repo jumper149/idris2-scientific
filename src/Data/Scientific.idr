@@ -178,9 +178,10 @@ addBits : {b : _} ->
           (carry : Bool) ->
           Vect n (Fin (S (S b))) ->
           Vect n (Fin (S (S b))) ->
-          Vect (S n) (Fin (S (S b)))
-addBits carry [] [] = [ if carry then FS FZ else FZ ]
-addBits carry (x :: xs) (y :: ys) = z :: addBits carry' xs ys where
+          (Vect n (Fin (S (S b))), Bool)
+addBits carry [] [] = ([], carry)
+addBits carry (x :: xs) (y :: ys) = let (zs, overflow) = addBits carry' xs ys
+                                    in (z :: zs, overflow) where
   sum : Integer
   sum = finToInteger x + finToInteger y + if carry then 1 else 0
   z : Fin (S (S b))
@@ -199,10 +200,11 @@ addBits' : {b : _} ->
            Nat ->
            List (Fin (S (S b))) ->
            List (Fin (S (S b))) ->
-           List (Fin (S (S b)))
+           (List (Fin (S (S b))), Bool)
 addBits' k xs ys = let xs' = reverse $ withMeaninglessZeros k $ reverse xs
                        ys' = reverse $ withMeaninglessZeros k $ reverse ys
-                   in toList $ addBits False xs' ys'
+                       (zs, overflow) = addBits False xs' ys'
+                   in (toList zs, overflow)
 
 private
 removeLeadingZeros' : List (Fin (S (S b))) -> (Nat, Maybe (Fin (S b), List (Fin (S (S b)))))
@@ -228,10 +230,10 @@ subtractBits : {b : _} ->
                (borrow : Bool) ->
                Vect n (Fin (S (S b))) ->
                Vect n (Fin (S (S b))) ->
-               Vect n (Fin (S (S b)))
-subtractBits True [] [] = ?cantHappenWhenSorted -- TODO: is there a nicer solution, than having this hole?
-subtractBits False [] [] = []
-subtractBits borrow (x :: xs) (y :: ys) = z :: subtractBits borrow' xs ys where
+               (Vect n (Fin (S (S b))), Bool)
+subtractBits borrow [] [] = ([], borrow)
+subtractBits borrow (x :: xs) (y :: ys) = let (zs, sign) = subtractBits borrow' xs ys
+                                          in (z :: zs, sign) where
   diff : Integer
   diff = finToInteger x - finToInteger y - if borrow then 1 else 0
   z : Fin (S (S b))
@@ -243,10 +245,11 @@ subtractBits' : {b : _} ->
            Nat ->
            List (Fin (S (S b))) ->
            List (Fin (S (S b))) ->
-           List (Fin (S (S b)))
+           (List (Fin (S (S b))), Bool)
 subtractBits' k xs ys = let xs' = reverse $ withMeaninglessZeros k $ reverse xs
                             ys' = reverse $ withMeaninglessZeros k $ reverse ys
-                        in toList $ subtractBits False xs' ys'
+                            (zs, sign) = subtractBits False xs' ys'
+                        in (toList zs, sign)
 
 export
 plus : {b : _} -> Scientific (S (S b)) -> Scientific (S (S b)) -> Scientific (S (S b))
@@ -257,29 +260,29 @@ plus x@(Sci s c e) y@(Sci s' c' e') =
   case compare (Sci Positive c e) (Sci Positive c' e') of
        LT => plus y x
        _ => if s == s'
-               then case fromDigits' $ addBits' countBits xBits yBits of
+               then let (sum, overflow) = addBits' countBits xBits yBits
+                    in case fromDigits' sum of
                          (Nothing, _) => SciZ
-                         (Just c'', bitShift) => let e'' = e + 1 - natToInteger bitShift
+                         (Just c'', bitShift) => let e'' = e + if overflow then 1 else 0
+                                                     s'' = s
                                                  in Sci s'' c'' e''
-               else case fromDigits' $ subtractBits' countBits xBits yBits of
-                         (Nothing, _) => SciZ
-                         (Just c'', bitShift) => let e'' = e - natToInteger bitShift
-                                                 in Sci s'' c'' e''
+               else let (diff, borrow) = subtractBits' countBits xBits yBits
+                    in case fromDigits' diff of
+                            (Nothing, _) => SciZ
+                            (Just c'', bitShift) => let e'' = e - natToInteger bitShift
+                                                        s'' = if borrow
+                                                                 then s'
+                                                                 else s
+                                                    in Sci s'' c'' e''
                  where
          exponentDifference : Nat
-         exponentDifference = integerToNat $ e' - e -- TODO: make sure this isn't negative!
+         exponentDifference = integerToNat $ e - e' -- TODO: make sure this isn't negative!
          xBits : List (Fin (S (S b)))
-         xBits = coefficientBits c ++ replicate exponentDifference FZ
+         xBits = coefficientBits c
          yBits : List (Fin (S (S b)))
-         yBits = coefficientBits c'
+         yBits = coefficientBits c' ++ replicate exponentDifference FZ
          countBits : Nat
          countBits = max (length xBits) (length yBits)
-         s'' : Sign
-         s'' = case (s,s') of
-                    (Positive, Positive) => Positive
-                    (Positive, Negative) => Positive
-                    (Negative, Positive) => Negative
-                    (Negative, Negative) => Negative
 
 ||| Multiply two Coefficients and return True in the Bool, when the product is greater than the base.
 multCoefficents : {b : _} -> Coefficient (S (S b)) -> Coefficient (S (S b)) -> (Coefficient (S (S b)), Bool)
