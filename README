@@ -16,15 +16,15 @@ Data.Scientific> prettyShowScientific $ x + y
 
 ## Work in progress
 I Would appreciate some help with this:
-- can't have implementation `Num (Scientific (S (S b)))`, since the methods need access to `b`
+* can't have implementation `Num (Scientific (S (S b)))`, since the methods need access to `b`
 
 There is still some stuff I want to do:
-- `toInteger`, `toNat`, `toFin`
-- `fromDouble`, `toDouble`
-- multiplication `*`
-- switching base from `b` to `n * b` with `n : Nat`
-- parsing with `Text.Token`, `Text.Lexer` and `Text.Parser`
-- use in a JSON library
+* `toInteger`, `toNat`, `toFin`
+* `fromDouble`, `toDouble`
+* multiplication `*`
+* switching base from `b` to `n * b` with `n : Nat`
+* parsing with `Text.Token`, `Text.Lexer` and `Text.Parser`
+* use in a JSON library
 
 And some things should be possible but are a little far fetched at the moment:
-- division by factors of the base `b`
+* division by factors of the base `b`
