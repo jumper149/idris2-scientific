@@ -3,6 +3,7 @@ module Data.Scientific
 
 import Data.Fin
 import Data.List
+import Data.Vect
 
 public export
 data Coefficient : (b : Nat) -> Type where
@@ -166,31 +167,61 @@ export
 fromNat : {b : _} -> Nat -> Scientific (S (S b))
 fromNat = fromInteger . natToInteger
 
+private
 ||| All bits of a Coefficient, least significant first.
 coefficientBits : Coefficient (S (S b)) -> List (Fin (S (S b)))
 coefficientBits (CoeffInt x) = [FS x]
 coefficientBits (CoeffFloat x xs x') = reverse $ FS x :: xs ++ [FS x']
 
--- TODO: currently add and subtract require equal lengths for the coefficients
--- adds 1 bit (might be zero)
+private
 addBits : {b : _} ->
           (carry : Bool) ->
-          List (Fin (S (S b))) ->
-          List (Fin (S (S b))) ->
-          List (Fin (S (S b)))
-addBits False [] [] = [FZ]
-addBits True [] [] = [FS FZ]
-addBits carry p@[] q@(y :: ys) = addBits carry q p -- TODO: case can be avoided when one is larger than the other
-addBits False (x :: xs) [] = x :: addBits False xs []
-addBits True (x :: xs) [] = case strengthen $ FS x of
-                                 Left _ => FZ :: addBits True xs []
-                                 Right x' => x' :: addBits False xs []
-addBits carry (x :: xs) (y :: ys) =
-  restrict (S b) addition :: addBits (addition >= natToInteger (S (S b))) xs ys where
-    addition : Integer
-    addition = if carry
-                  then finToInteger x + finToInteger y + 1
-                  else finToInteger x + finToInteger y
+          Vect n (Fin (S (S b))) ->
+          Vect n (Fin (S (S b))) ->
+          Vect (S n) (Fin (S (S b)))
+addBits carry [] [] = [ if carry then FS FZ else FZ ]
+addBits carry (x :: xs) (y :: ys) = z :: addBits carry' xs ys where
+  sum : Integer
+  sum = finToInteger x + finToInteger y + if carry then 1 else 0
+  z : Fin (S (S b))
+  z = restrict (S b) sum
+  carry' : Bool
+  carry' = sum >= natToInteger b
+
+withMeaninglessZeros : (n : Nat) ->
+                       (xs : List (Fin (S (S b)))) ->
+                       Vect n (Fin (S (S b)))
+withMeaninglessZeros Z xs = []
+withMeaninglessZeros (S k) [] = FZ :: withMeaninglessZeros k []
+withMeaninglessZeros (S k) (x::xs) = x :: withMeaninglessZeros k xs
+
+addBits' : {b : _} ->
+           Nat ->
+           List (Fin (S (S b))) ->
+           List (Fin (S (S b))) ->
+           List (Fin (S (S b)))
+addBits' k xs ys = let xs' = reverse $ withMeaninglessZeros k $ reverse xs
+                       ys' = reverse $ withMeaninglessZeros k $ reverse ys
+                   in toList $ addBits False xs' ys'
+
+private
+removeLeadingZeros' : List (Fin (S (S b))) -> (Nat, Maybe (Fin (S b), List (Fin (S (S b)))))
+removeLeadingZeros' [] = (Z, Nothing)
+removeLeadingZeros' (FZ :: xs) = let (n, res) = removeLeadingZeros' xs
+                                 in (S n, res)
+removeLeadingZeros' (FS x :: xs) = (Z, Just (x, xs))
+
+private
+||| Requires the digits to be ordered, least significant first.
+||| Returns Coefficient and number of significant zeros.
+fromDigits' : List (Fin (S (S b))) -> (Maybe (Coefficient (S (S b))), Nat)
+fromDigits' ys =
+  let (n, removedLeading) = removeLeadingZeros' $ reverse ys
+  in case removedLeading of
+          Nothing => (Nothing, n)
+          Just (x, ys') => case removeLeadingZeros $ reverse ys' of
+                               Nothing => (Just (CoeffInt x), n)
+                               Just (x', xs) => (Just (CoeffFloat x (reverse xs) x'), n)
 
 subtractBits : {b : _} ->
                (borrow : Bool) ->
@@ -213,15 +244,22 @@ plus x SciZ = x
 plus x@(Sci s c e) y@(Sci s' c' e') =
   case compare e e' of
        GT => plus y x
-       _ => ?asdasd where
+       _ => case fromDigits' bits of
+                 (Nothing, _) => SciZ
+                 (Just c'', bitShift) => let e'' = e' + natToInteger (1 `minus` bitShift)
+                                         in Sci s'' c'' e''
+                 where
          exponentDifference : Nat
-         exponentDifference = integerToNat $ e' - e
+         exponentDifference = integerToNat $ e' - e -- TODO: make sure this isn't negative!
+         xBits : List (Fin (S (S b)))
+         xBits = coefficientBits c ++ replicate exponentDifference FZ
+         yBits : List (Fin (S (S b)))
+         yBits = coefficientBits c'
+         countBits : Nat
+         countBits = max (length xBits) (length yBits)
          bits : List (Fin (S (S b)))
-         bits = addBits False (coefficientBits c ++ replicate exponentDifference FZ) (coefficientBits c')
+         bits = addBits' countBits xBits yBits
          s'' : Sign
-         c'' : Coefficient (S (S b))
-         e'' : Integer
-         e'' = e' + ?additionalExponent bits
 
 ||| Multiply two Coefficients and return True in the Bool, when the product is greater than the base.
 multCoefficents : {b : _} -> Coefficient (S (S b)) -> Coefficient (S (S b)) -> (Coefficient (S (S b)), Bool)
