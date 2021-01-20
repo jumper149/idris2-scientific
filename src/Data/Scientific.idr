@@ -265,11 +265,10 @@ fromDigits' ys =
                                Just (x', xs) => (Just (CoeffFloat x (reverse xs) x'), n)
 
 export
-plus : {b : _} -> Scientific (S (S b)) -> Scientific (S (S b)) -> Scientific (S (S b))
-plus SciZ y = y
-plus x SciZ = x
--- TODO: finish plus
-plus x@(Sci s c e) y@(Sci s' c' e') =
+(+) : {b : _} -> Scientific (S (S b)) -> Scientific (S (S b)) -> Scientific (S (S b))
+SciZ + y = y
+x + SciZ = x
+x@(Sci s c e) + y@(Sci s' c' e') =
   let (zs, bit) = plusBits' op (xs, e) (ys, e')
   in case op of
           Positive => let s'' = s
@@ -309,10 +308,10 @@ multCoefficents (CoeffFloat x xs x') (CoeffInt y) = ?multCoefficents_rhs_2
 multCoefficents (CoeffFloat x xs x') (CoeffFloat y ys y') = ?multCoefficents_rhs_3
 
 export
-mult : {b : _} -> Scientific (S (S b)) -> Scientific (S (S b)) -> Scientific (S (S b))
-mult SciZ y = SciZ
-mult x SciZ = SciZ
-mult (Sci s c e) (Sci s' c' e') = Sci s'' c'' e'' where
+(*) : {b : _} -> Scientific (S (S b)) -> Scientific (S (S b)) -> Scientific (S (S b))
+SciZ * y = SciZ
+x * SciZ = SciZ
+(Sci s c e) * (Sci s' c' e') = Sci s'' c'' e'' where
   coefficientPair : (Coefficient (S (S b)), Bool)
   coefficientPair = multCoefficents c c'
   s'' : Sign
@@ -326,22 +325,23 @@ mult (Sci s c e) (Sci s' c' e') = Sci s'' c'' e'' where
            then e + e' + 1
            else e + e'
 
+-- -- TODO: implementations don't work because the base (S (S b)) isn't accessible in the method's context.
 -- -- TODO: consider other implementations:
 -- -- - Fractional might not terminate, because of infinite representation
 -- -- - Integral doesn't sound like it would fit, but mod and div make still make sense
 -- public export
 -- Num (Scientific (S (S b))) where
---   -- (+) = plus
---   -- (*) = mult
+--   -- (+) = (+)
+--   -- (*) = (+)
 --   -- fromInteger = fromInteger
 
---public export
---Neg (Scientific (S (S b))) where
---  -- negate = negate
+-- public export
+-- Neg (Scientific (S (S b))) where
+--   -- negate = negate
 
---public export
---Abs (Scientific (S (S b))) where
---  -- abs = abs
+-- public export
+-- Abs (Scientific (S (S b))) where
+--   -- abs = abs
 
 export
 prettyShowScientific : Scientific 10 -> String
