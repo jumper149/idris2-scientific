@@ -18,6 +18,13 @@ data Coefficient : (b : Nat) -> Type where
                Coefficient (S (S b))
 
 public export
+Uninhabited (Coefficient 0) where
+  uninhabited _ impossible
+public export
+Uninhabited (Coefficient 1) where
+  uninhabited _ impossible
+
+public export
 Eq (Coefficient b) where
   (CoeffInt x) == (CoeffInt y) = x == y
   (CoeffFloat x xs x') == (CoeffFloat y ys y') = x == y && xs == ys && x' == y'
@@ -85,11 +92,19 @@ prettyShowSign s = case s of
 |||   x = \Sigma_{i=n}^m a_i * b^i          , {n,m : Integer; a_i : Fin b}
 public export
 data Scientific : (b : Nat) -> Type where
-  SciZ : Scientific b
+  SciZ : Scientific (S (S b))
   Sci : Sign ->
         Coefficient b ->
         Integer ->
         Scientific b
+
+public export
+Uninhabited (Scientific 0) where
+  uninhabited (Sci _ _ _) impossible
+
+public export
+Uninhabited (Scientific 1) where
+  uninhabited (Sci _ _ _) impossible
 
 public export
 Eq (Scientific b) where
@@ -343,17 +358,17 @@ x * SciZ = SciZ
 -- -- - Fractional might not terminate, because of infinite representation
 -- -- - Integral doesn't sound like it would fit, but mod and div make still make sense
 -- public export
--- Num (Scientific (S (S b))) where
+-- Num (Scientific b) where
 --   -- (+) = (+)
---   -- (*) = (+)
+--   -- (*) = (*)
 --   -- fromInteger = fromInteger
 
 -- public export
--- Neg (Scientific (S (S b))) where
+-- Neg (Scientific b) where
 --   -- negate = negate
 
 -- public export
--- Abs (Scientific (S (S b))) where
+-- Abs (Scientific b) where
 --   -- abs = abs
 
 ||| Create string representing using scientific notation.
