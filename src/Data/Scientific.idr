@@ -319,6 +319,9 @@ where
   ys : List (Fin (S (S b)))
   ys = coefficientBits c'
 
+(-) : {b : _} -> Scientific (S (S b)) -> Scientific (S (S b)) -> Scientific (S (S b))
+x - y = x + negate y
+
 -- TODO
 ||| Multiply two Coefficients and return True in the Bool, when the product is greater than the base.
 private
@@ -366,6 +369,7 @@ x * SciZ = SciZ
 -- public export
 -- Neg (Scientific b) where
 --   -- negate = negate
+--   -- (-) = (-)
 
 -- public export
 -- Abs (Scientific b) where
