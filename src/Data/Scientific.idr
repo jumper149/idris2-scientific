@@ -132,6 +132,36 @@ Ord (Scientific b) where
                                       EQ => compare c' c
                                       comp => comp
 
+infixl 9 ^
+private
+(^) : Nat -> Nat -> Nat
+x ^ Z = 1
+x ^ (S k) = x * (x ^ k)
+
+private
+digitsToNat : {b : _} -> List (Fin (S (S b))) -> Nat
+digitsToNat [] = 0
+digitsToNat (x::xs) = finToNat x + (S (S b)) * digitsToNat xs
+
+export
+toInteger : {b : _} -> Scientific b -> Maybe Integer
+toInteger SciZ = Just 0
+toInteger (Sci s c e) =
+  if e >= 0
+     then case c of
+               CoeffInt x => Just $ withSign $ finToNat (FS x) * (b ^ integerToNat e)
+               CoeffFloat x xs x' => let digits = reverse $ (FS x) :: xs ++ [FS x']
+                                         e' = e - natToInteger (length (xs ++ [FS x']))
+                                     in if e' >= 0
+                                           then Just $ withSign $ digitsToNat digits * (b ^ integerToNat e')
+                                           else Nothing
+     else Nothing
+where
+  withSign : Nat -> Integer
+  withSign = case s of
+                  Negative => negate . natToInteger
+                  Positive => natToInteger
+
 export
 negate : Scientific b -> Scientific b
 negate SciZ = SciZ
