@@ -230,14 +230,14 @@ plusBit : (op : Sign) ->
           ((Fin (S (S b))), Bool)
 plusBit op False x FZ = (x, False)
 plusBit Positive True x FZ = case strengthen $ FS FZ of
-                                  Left _ => (FZ, True)
-                                  Right z => (z, False)
+                                  Nothing => (FZ, True)
+                                  Just z => (z, False)
 plusBit Negative True x FZ = case x of
                                   FZ => (last, True)
                                   FS z => (weaken z, False)
 plusBit Positive carry x (FS y) = case strengthen $ FS x of
-                                       Left _ => (fst $ plusBit Positive carry FZ (weaken y), True)
-                                       Right z => plusBit Positive carry z (weaken y)
+                                       Nothing => (fst $ plusBit Positive carry FZ (weaken y), True)
+                                       Just z => plusBit Positive carry z (weaken y)
 plusBit Negative carry x (FS y) = case x of
                                        FZ => (fst $ plusBit Negative carry last (weaken y), True)
                                        FS z => plusBit Negative carry (weaken z) (weaken y)
