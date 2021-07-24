@@ -14,18 +14,21 @@ import Data.Scientific
 public export
 data MyTokenKind = TDigit
                  | TSeparator
+                 | TExponator
                  | TMinus
 
 public export
 Show MyTokenKind where
   show TDigit = "TDigit"
   show TSeparator = "TSeparator"
+  show TExponator = "TExponator"
   show TMinus = "TMinus"
 
 public export
 TokenKind MyTokenKind where
   TokType TDigit = Fin 10
   TokType TSeparator = ()
+  TokType TExponator = ()
   TokType TMinus = ()
   tokValue TDigit "0" = 0
   tokValue TDigit "1" = 1
@@ -39,12 +42,14 @@ TokenKind MyTokenKind where
   tokValue TDigit "9" = 9
   tokValue TDigit _ = ?exhaustiveBecauseOfTokenMap -- TODO
   tokValue TSeparator _ = ()
+  tokValue TExponator _ = ()
   tokValue TMinus _ = ()
 
 public export
 Eq MyTokenKind where
   TDigit == TDigit = True
   TSeparator == TSeparator = True
+  TExponator == TExponator = True
   TMinus == TMinus = True
   _ == _ = False
 
@@ -53,6 +58,7 @@ tokenMap : TokenMap (Token MyTokenKind)
 tokenMap = toTokenMap
   [ (digit, TDigit)
   , (is '.', TSeparator)
+  , (is 'e', TExponator)
   , (is '-', TMinus)
   ]
 
@@ -93,9 +99,19 @@ private
 grammarCoeff : Grammar (Token MyTokenKind) True (Coefficient 10)
 grammarCoeff = fixCoeff <$> grammarBeforeSeparator <*> optional grammarSeparator >>= maybe (fail "expected ending on digit between 1 and 9") pure
 
+private
+fixExp : List1 (Fin 10) -> Integer
+fixExp = foldr1 f . map finToInteger . reverse
+  where f : Integer -> Integer -> Integer
+        f x i = x + 10 * i
+
+private
+grammarExponent : Grammar (Token MyTokenKind) True Integer
+grammarExponent = match TExponator *> fixExp <$> some (match TDigit)
+
 -- TODO: Fix exponent.
 -- TODO: Expect eof after zero.
 ||| Grammar of a Scientific 10.
 public export
 myGrammar : Grammar (Token MyTokenKind) True (Scientific 10)
-myGrammar = grammarZero <|> (Sci <$> grammarSign <*> grammarCoeff <*> pure 0)
+myGrammar = grammarZero <|> (Sci <$> grammarSign <*> grammarCoeff <*> grammarExponent)
