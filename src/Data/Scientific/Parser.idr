@@ -114,5 +114,5 @@ grammarExponent = match TExponator *> applySign <$> grammarSign <*> fixExp <$> s
 -- TODO: Expect eof after zero.
 ||| Grammar of a Scientific 10.
 export
-myGrammar : Grammar (Token ScientificTokenKind) True (Scientific 10)
-myGrammar = grammarZero <|> (Sci <$> grammarSign <*> grammarCoeff <*> grammarExponent)
+scientificGrammar : Grammar (Token ScientificTokenKind) True (Scientific 10)
+scientificGrammar = grammarZero <|> (Sci <$> grammarSign <*> grammarCoeff <*> grammarExponent)
