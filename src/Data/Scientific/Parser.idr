@@ -60,7 +60,7 @@ tokenMap : TokenMap (Token MyTokenKind)
 tokenMap = toTokenMap
   [ (digit, TDigit)
   , (is '.', TSeparator)
-  , (is 'e', TExponator)
+  , (oneOf "eE", TExponator)
   , (oneOf "+-", TSign)
   ]
 
