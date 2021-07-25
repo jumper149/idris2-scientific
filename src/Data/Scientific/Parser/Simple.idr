@@ -1,4 +1,4 @@
-module Data.Scientific.Parser
+module Data.Scientific.Parser.Simple
 
 import Data.Fin
 import Data.List1
