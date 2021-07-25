@@ -15,21 +15,21 @@ public export
 data MyTokenKind = TDigit
                  | TSeparator
                  | TExponator
-                 | TMinus
+                 | TSign
 
 public export
 Show MyTokenKind where
   show TDigit = "TDigit"
   show TSeparator = "TSeparator"
   show TExponator = "TExponator"
-  show TMinus = "TMinus"
+  show TSign = "TSign"
 
 public export
 TokenKind MyTokenKind where
   TokType TDigit = Fin 10
   TokType TSeparator = ()
   TokType TExponator = ()
-  TokType TMinus = ()
+  TokType TSign = Sign
   tokValue TDigit "0" = 0
   tokValue TDigit "1" = 1
   tokValue TDigit "2" = 2
@@ -40,17 +40,19 @@ TokenKind MyTokenKind where
   tokValue TDigit "7" = 7
   tokValue TDigit "8" = 8
   tokValue TDigit "9" = 9
-  tokValue TDigit _ = ?exhaustiveBecauseOfTokenMap -- TODO
+  tokValue TDigit _ = ?exhaustiveBecauseOfTokenMap1 -- TODO
   tokValue TSeparator _ = ()
   tokValue TExponator _ = ()
-  tokValue TMinus _ = ()
+  tokValue TSign "+" = Positive
+  tokValue TSign "-" = Negative
+  tokValue TSign _ = ?exhaustiveBecauseOfTokenMap2 -- TODO
 
 public export
 Eq MyTokenKind where
   TDigit == TDigit = True
   TSeparator == TSeparator = True
   TExponator == TExponator = True
-  TMinus == TMinus = True
+  TSign == TSign = True
   _ == _ = False
 
 public export
@@ -59,16 +61,12 @@ tokenMap = toTokenMap
   [ (digit, TDigit)
   , (is '.', TSeparator)
   , (is 'e', TExponator)
-  , (is '-', TMinus)
+  , (oneOf "+-", TSign)
   ]
 
 private
 grammarSign : Grammar (Token MyTokenKind) False Sign
-grammarSign = do
-  mbMinus <- optional (match TMinus)
-  pure $ case mbMinus of
-              Nothing => Positive
-              Just () => Negative
+grammarSign = fromMaybe Positive <$> optional (match TSign)
 
 private
 grammarBeforeSeparator : Grammar (Token MyTokenKind) True (Fin 9)
