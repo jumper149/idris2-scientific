@@ -105,7 +105,10 @@ fixExp = foldr1 f . map finToInteger . reverse
 
 private
 grammarExponent : Grammar (Token MyTokenKind) True Integer
-grammarExponent = match TExponator *> fixExp <$> some (match TDigit)
+grammarExponent = match TExponator *> applySign <$> grammarSign <*> fixExp <$> some (match TDigit)
+  where applySign : Sign -> Integer -> Integer
+        applySign Positive = id
+        applySign Negative = negate
 
 -- TODO: Fix exponent.
 -- TODO: Expect eof after zero.
