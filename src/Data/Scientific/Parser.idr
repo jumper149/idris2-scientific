@@ -55,7 +55,7 @@ Eq MyTokenKind where
   TSign == TSign = True
   _ == _ = False
 
-public export
+export
 tokenMap : TokenMap (Token MyTokenKind)
 tokenMap = toTokenMap
   [ (digit, TDigit)
@@ -113,6 +113,6 @@ grammarExponent = match TExponator *> applySign <$> grammarSign <*> fixExp <$> s
 -- TODO: Fix exponent.
 -- TODO: Expect eof after zero.
 ||| Grammar of a Scientific 10.
-public export
+export
 myGrammar : Grammar (Token MyTokenKind) True (Scientific 10)
 myGrammar = grammarZero <|> (Sci <$> grammarSign <*> grammarCoeff <*> grammarExponent)
